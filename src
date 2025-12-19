@@ -1,0 +1,51 @@
+
+Приложение. Код программы
+-------------------------
+
+# 1. Импорт библиотек
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+from textblob import TextBlob
+from googleapiclient.discovery import build
+import streamlit as st
+
+# 2. Сбор данных с YouTube
+api_key = "ВАШ_API_KEY"
+youtube = build('youtube', 'v3', developerKey=api_key)
+
+def get_comments(video_id, max_results=100):
+    comments = []
+    request = youtube.commentThreads().list(
+        part="snippet",
+        videoId=video_id,
+        maxResults=max_results,
+        textFormat="plainText"
+    )
+    response = request.execute()
+    for item in response['items']:
+        comment = item['snippet']['topLevelComment']['snippet']['textDisplay']
+        comments.append(comment)
+    return comments
+
+comments = get_comments('ID_видео')
+
+# 3. Предобработка текста
+import re
+def clean_text(text):
+    text = re.sub(r"http\S+", "", text)  # удалить ссылки
+    text = re.sub(r"[^a-zA-Zа-яА-Я\s]", "", text)  # удалить спецсимволы
+    text = text.lower()
+    return text
+
+comments_clean = [clean_text(c) for c in comments]
+
+# 4. Анализ тональности
+sentiments = [TextBlob(c).sentiment.polarity for c in comments_clean]
+
+# 5. Визуализация
+plt.hist(sentiments, bins=20)
+plt.title("Распределение тональности комментариев")
+plt.xlabel("Полярность")
+plt.ylabel("Количество комментариев")
+plt.show()
